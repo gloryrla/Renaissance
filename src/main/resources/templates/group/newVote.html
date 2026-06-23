@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>새 투표</title>
+</head>
+<body>
+<h1>새 투표 만들기</h1>
+<p th:if="${loginMember != null}" th:text="'안녕하세요, ' + ${loginMember.name} + '님'">사용자</p>
+<p>투표 생성은 REST API <code>POST /api/groups/{groupId}/votes</code> 를 사용합니다.</p>
+</body>
+</html>

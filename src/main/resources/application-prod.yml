@@ -1,0 +1,27 @@
+# ===== 운영 (Railway + PostgreSQL) =====
+# 아래 값들은 Railway 환경변수로 주입한다.
+#   SPRING_DATASOURCE_URL      예: jdbc:postgresql://<host>:<port>/<db>
+#   SPRING_DATASOURCE_USERNAME
+#   SPRING_DATASOURCE_PASSWORD
+#   KAKAO_CLIENT_ID / KAKAO_SECRET_ID / KAKAO_REDIRECT_URI (운영 도메인)
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    show-sql: false
+    hibernate:
+      # update: 스키마 자동 반영(데이터 보존). 운영 안정화되면 Flyway 등 마이그레이션 권장.
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+server:
+  servlet:
+    session:
+      cookie:
+        secure: true          # HTTPS 전용 쿠키 (Railway 도메인은 HTTPS 제공)
+        same-site: strict

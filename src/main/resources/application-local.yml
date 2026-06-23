@@ -1,0 +1,15 @@
+# ===== 로컬 개발 (H2) =====
+# H2 TCP 서버가 떠 있어야 함. (또는 jdbc:h2:mem:... 로 바꿔 인메모리 사용 가능)
+spring:
+  datasource:
+    url: jdbc:h2:tcp://localhost/~/project1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: create
+  h2:
+    console:
+      enabled: true

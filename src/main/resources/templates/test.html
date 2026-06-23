@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>음식점 목록</title>
+</head>
+<body>
+
+<nav>
+    <span>project1</span>
+    <div>
+        <a th:href="@{/mypage}">마이페이지</a>
+        <a th:href="@{/group/new}">그룹 생성</a>
+        <a th:href="@{/group/list}">그룹 목록</a>
+        <a th:href="@{/group/in}">그룹 참여</a>
+    </div>
+    <div>
+        <a th:href="@{/logout}">로그아웃</a>
+    </div>
+</nav>
+<form th:action="@{/restaurant/list}" method="get">
+    <input type="text" name="menu" placeholder="메뉴를 입력하세요" th:value="${param.menu}"/>
+    <button type="submit">검색</button>
+</form>
+<div>
+    <h2>음식점 목록</h2>
+    <p th:text="'총 ' + ${restaurantList.meta.total_count} + '개 검색 (노출 가능: ' + ${restaurantList.meta.pageable_count} + '개)'"></p>
+
+    <div th:each="restaurant : ${restaurantList.documents}">
+        <h3>
+            <a th:href="${restaurant.place_url}" target="_blank" th:text="${restaurant.placeName}"></a>
+        </h3>
+        <p th:text="'카테고리: ' + ${restaurant.categoryName}"></p>
+        <p th:if="${restaurant.phone != null and !#strings.isEmpty(restaurant.phone)}"
+           th:text="'전화번호: ' + ${restaurant.phone}"></p>
+        <p th:text="'도로명 주소: ' + ${restaurant.roadAddressName}"></p>
+        <p th:text="'지번 주소: ' + ${restaurant.addressName}"></p>
+        <p th:if="${restaurant.distance != null and !#strings.isEmpty(restaurant.distance)}"
+           th:text="'거리: ' + ${restaurant.distance} + 'm'"></p>
+        <hr/>
+    </div>
+</div>
+
+</body>
+</html>

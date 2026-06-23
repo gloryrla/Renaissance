@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>그룹 목록</title>
+</head>
+<body>
+
+<nav>
+    <span>project1</span>
+    <div>
+        <a th:href="@{/mypage}">마이페이지</a>
+        <a th:href="@{/group/new}">그룹 생성</a>
+        <a th:href="@{/group/list}">그룹 목록</a>
+        <a th:href="@{/group/in}">그룹 참여</a>
+        <a th:href="@{/restaurant/list}">음식점 검색</a>
+
+    </div>
+    <div>
+        <span th:text="${loginMember.name} + '님'"></span>
+        <a th:href="@{/logout}">로그아웃</a>
+    </div>
+</nav>
+
+<div>
+    <h2>그룹 목록</h2>
+    <div th:each="group : ${groups}">
+        <a th:href="@{/group/{id}/members(id=${group.id})}">
+            <p th:text="'그룹 이름: ' + ${group.name}"></p>
+        </a>
+        <p th:text="'설명: ' + ${group.description}"></p>
+        <p th:text="'초대 코드: ' + ${group.inviteCode}"></p>
+        <p th:text="'방장: ' + ${group.owner.name}"></p>
+        <hr/>
+    </div>
+</div>
+
+</body>
+</html>

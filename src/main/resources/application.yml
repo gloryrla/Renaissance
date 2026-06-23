@@ -1,0 +1,35 @@
+# ===== 공통 설정 (모든 프로파일) =====
+# 프로파일은 환경변수 SPRING_PROFILES_ACTIVE 로 전환한다. (미지정 시 local)
+# 운영(prod) 전용 DB/시크릿은 application-prod.yml + Railway 환경변수 참고.
+spring:
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
+  application:
+    name: project1
+  session:
+    store-type: jdbc
+    jdbc:
+      initialize-schema: always   # 세션 테이블 자동 생성 (h2/postgres 모두)
+  jpa:
+    properties:
+      hibernate:
+        format_sql: true
+
+server:
+  port: ${PORT:8080}              # Railway 가 주입하는 PORT 사용 (없으면 8080)
+  servlet:
+    session:
+      timeout: 30d                # 세션 30일
+      cookie:
+        max-age: 2592000          # 쿠키 30일 (초 단위)
+        http-only: true
+        same-site: lax
+
+# 시크릿은 환경변수로만 주입한다. (파일에 실제 키를 적지 않는다)
+#   로컬: export KAKAO_CLIENT_ID=... 등으로 설정
+#   운영: Railway 변수로 설정
+# redirect_uri 만 미지정 시 로컬 기본값 사용.
+kakao:
+  client_id: ${KAKAO_CLIENT_ID}
+  secret_id: ${KAKAO_SECRET_ID}
+  redirect_uri: ${KAKAO_REDIRECT_URI:http://localhost:8080/callback}
