@@ -30,9 +30,9 @@ import static org.junit.jupiter.api.Assertions.*;
         "spring.datasource.driver-class-name=org.h2.Driver",
         "spring.jpa.hibernate.ddl-auto=create-drop",
         "spring.session.store-type=none",   // 테스트에선 JDBC 세션 저장 비활성화
+        "app.menu-seed.enabled=false",      // CSV 자동 적재 끄고 테스트용 메뉴만 사용
         // 시크릿 환경변수 대체(컨텍스트 로딩용 더미)
-        "kakao.client_id=test", "kakao.secret_id=test",
-        "naver.client_id=test", "naver.secret_id=test"
+        "kakao.client_id=test", "kakao.secret_id=test"
 })
 class VoteSessionFlowTest {
 
@@ -46,18 +46,18 @@ class VoteSessionFlowTest {
     @Test
     void 전체_투표_흐름() {
         // ===== 시드 데이터 =====
-        Member a = saveMember("호철", 1001L);   // CHINESE 비선호 + NUTS 알레르기
-        Member b = saveMember("영희", 1002L);   // DAIRY 알레르기
+        Member a = saveMember("호철", 1001L);   // CHINESE 비선호 + NUT 알레르기
+        Member b = saveMember("영희", 1002L);   // MILK 알레르기
         Member d = saveMember("동길", 1003L);   // KOREAN 비선호 + EGG 알레르기
 
         Menu m1 = menuRepository.save(menu("김밥", Cuisine.KOREAN));
         Menu m2 = menuRepository.save(menu("비빔밥", Cuisine.KOREAN, Restriction.EGG));
         Menu m3 = menuRepository.save(menu("짜장면", Cuisine.CHINESE));        // CHINESE -> 2단계 제외
-        Menu m4 = menuRepository.save(menu("스테이크", Cuisine.WESTERN, Restriction.BEEF));
+        Menu m4 = menuRepository.save(menu("스테이크", Cuisine.WESTERN, Restriction.SOY));
         Menu m5 = menuRepository.save(menu("초밥", Cuisine.JAPANESE));
-        Menu m6 = menuRepository.save(menu("팟타이", Cuisine.ASIAN, Restriction.NUTS));   // NUTS -> 1단계 제외
-        Menu m7 = menuRepository.save(menu("피자", Cuisine.WESTERN, Restriction.DAIRY));  // DAIRY -> 1단계 제외
-        Menu m8 = menuRepository.save(menu("탕수육", Cuisine.CHINESE, Restriction.PORK));  // CHINESE -> 2단계 제외
+        Menu m6 = menuRepository.save(menu("팟타이", Cuisine.ASIAN, Restriction.NUT));    // NUT -> 1단계 제외
+        Menu m7 = menuRepository.save(menu("피자", Cuisine.WESTERN, Restriction.MILK));   // MILK -> 1단계 제외
+        Menu m8 = menuRepository.save(menu("탕수육", Cuisine.CHINESE, Restriction.SEAFOOD)); // CHINESE -> 2단계 제외
 
         Group group = groupRepository.save(Group.builder().name("점심팟").build());
         joinGroup(group, a, b, d);   // 세 명 모두 그룹원
@@ -69,9 +69,9 @@ class VoteSessionFlowTest {
 
         // ===== ② 선호 제출 =====
         voteSessionService.submitPreference(voteId, a.getId(),
-                new MemberPreferenceRequest(a.getId(), EnumSet.of(Cuisine.CHINESE), EnumSet.of(Restriction.NUTS)));
+                new MemberPreferenceRequest(a.getId(), EnumSet.of(Cuisine.CHINESE), EnumSet.of(Restriction.NUT)));
         voteSessionService.submitPreference(voteId, b.getId(),
-                new MemberPreferenceRequest(b.getId(), Collections.emptySet(), EnumSet.of(Restriction.DAIRY)));
+                new MemberPreferenceRequest(b.getId(), Collections.emptySet(), EnumSet.of(Restriction.MILK)));
         voteSessionService.submitPreference(voteId, d.getId(),
                 new MemberPreferenceRequest(d.getId(), EnumSet.of(Cuisine.KOREAN), EnumSet.of(Restriction.EGG)));
 
@@ -87,9 +87,9 @@ class VoteSessionFlowTest {
         Set<Long> candidateIds = new HashSet<>();
         for (CandidateMenuResponse c : rec.candidates()) {
             candidateIds.add(c.menuId());
-            // 알레르기 메뉴(NUTS/DAIRY/EGG)는 절대 후보에 없어야 한다
-            assertNotEquals(m6.getId(), c.menuId(), "NUTS 메뉴는 제외돼야 한다");
-            assertNotEquals(m7.getId(), c.menuId(), "DAIRY 메뉴는 제외돼야 한다");
+            // 알레르기 메뉴(NUT/MILK/EGG)는 절대 후보에 없어야 한다
+            assertNotEquals(m6.getId(), c.menuId(), "NUT 메뉴는 제외돼야 한다");
+            assertNotEquals(m7.getId(), c.menuId(), "MILK 메뉴는 제외돼야 한다");
             assertNotEquals(m2.getId(), c.menuId(), "EGG 메뉴는 제외돼야 한다");
         }
         assertEquals(VoteStatus.VOTING, voteSessionService.getDetail(voteId, a.getId()).status());

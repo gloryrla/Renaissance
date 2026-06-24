@@ -10,8 +10,8 @@ import org.springframework.test.context.TestPropertySource;
 		"spring.datasource.driver-class-name=org.h2.Driver",
 		"spring.jpa.hibernate.ddl-auto=create-drop",
 		"spring.session.store-type=none",
-		"kakao.client_id=test", "kakao.secret_id=test",
-		"naver.client_id=test", "naver.secret_id=test"
+		"app.menu-seed.enabled=false",
+		"kakao.client_id=test", "kakao.secret_id=test"
 })
 class Project1ApplicationTests {
 
