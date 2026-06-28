@@ -26,6 +26,9 @@ dependencies {
     implementation 'com.google.zxing:core:3.5.3'
     implementation 'com.google.zxing:javase:3.5.3'
 
+    // Swagger / OpenAPI 문서 (Spring Boot 4 대응 3.x 라인)
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3'
+
     // JWT (별도 프론트 인증)
     implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
     runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'

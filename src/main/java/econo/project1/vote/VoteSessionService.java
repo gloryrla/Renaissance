@@ -5,6 +5,7 @@ import econo.project1.common.NotFoundException;
 import econo.project1.group.Group;
 import econo.project1.group.GroupMember;
 import econo.project1.group.GroupMemberRepository;
+import econo.project1.group.GroupRole;
 import econo.project1.member.Member;
 import econo.project1.member.MemberRepository;
 import econo.project1.menu.Menu;
@@ -69,6 +70,7 @@ public class VoteSessionService {
         Vote vote = getVote(voteId);
         requireGroupMember(vote, actingMemberId);
         requireStatus(vote, VoteStatus.RECOMMENDING);
+        requireBeforeDeadline(vote);
 
         List<VotePreference> prefs = preferenceRepository.findByVote(vote);
         if (prefs.isEmpty()) {
@@ -132,15 +134,26 @@ public class VoteSessionService {
             ballot.setChoice(choice);
             ballotRepository.save(ballot);
         });
+
+        // ⑤ 그룹원 전원이 호/불호를 제출하면 자동으로 집계해 마감한다(별도 마무리 버튼 없음)
+        if (allMembersVoted(vote)) {
+            aggregate(vote);
+        }
     }
 
-    // ⑤ 집계 -> 최종 메뉴 확정 -> 상태 CLOSED
+    // ⑤ 방장(OWNER) 강제 마감: 전원이 투표를 마치지 않았어도 그때까지 모인 표로 집계해 마감한다.
     @Transactional
-    public CandidateMenuResponse decide(Long voteId, Long actingMemberId) {
+    public CandidateMenuResponse forceClose(Long voteId, Long actingMemberId) {
         Vote vote = getVote(voteId);
-        requireGroupMember(vote, actingMemberId);
+        Member member = requireGroupMember(vote, actingMemberId);
+        requireOwner(vote, member);
         requireStatus(vote, VoteStatus.VOTING);
+        return aggregate(vote);
+    }
 
+    // ⑤ 집계 -> 최종 메뉴 확정 -> 상태 CLOSED.
+    // 그룹원 전원이 투표를 마쳤을 때 submitBallot 안에서 자동 호출되거나, 방장이 forceClose 로 호출한다.
+    private CandidateMenuResponse aggregate(Vote vote) {
         List<Menu> candidates = candidateRepository.findByVote(vote).stream()
                 .map(VoteCandidate::getMenu)
                 .collect(Collectors.toList());
@@ -156,6 +169,20 @@ public class VoteSessionService {
         vote.setResultMenu(winner);
         vote.setStatus(VoteStatus.CLOSED);
         return CandidateMenuResponse.from(winner);
+    }
+
+    // 그룹원 전원이 적어도 한 표라도 제출했는지 검사
+    private boolean allMembersVoted(Vote vote) {
+        Set<Long> groupMemberIds = groupMemberRepository.findByGroup(vote.getGroup()).stream()
+                .map(gm -> gm.getMember().getId())
+                .collect(Collectors.toSet());
+        if (groupMemberIds.isEmpty()) {
+            return false;
+        }
+        Set<Long> votedMemberIds = ballotRepository.findByVote(vote).stream()
+                .map(b -> b.getMember().getId())
+                .collect(Collectors.toSet());
+        return votedMemberIds.containsAll(groupMemberIds);
     }
 
     @Transactional(readOnly = true)
@@ -218,6 +245,15 @@ public class VoteSessionService {
             throw new ForbiddenException("이 그룹의 멤버만 참여할 수 있습니다.");
         }
         return member;
+    }
+
+    // 로그인 회원이 이 투표가 속한 그룹의 방장(OWNER)인지 검증한다.
+    private void requireOwner(Vote vote, Member member) {
+        GroupMember groupMember = groupMemberRepository.findByGroupAndMember(vote.getGroup(), member)
+                .orElseThrow(() -> new ForbiddenException("이 그룹의 멤버만 참여할 수 있습니다."));
+        if (groupMember.getRole() != GroupRole.OWNER) {
+            throw new ForbiddenException("방장만 투표를 마감할 수 있습니다.");
+        }
     }
 
     private void requireStatus(Vote vote, VoteStatus expected) {

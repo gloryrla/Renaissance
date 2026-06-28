@@ -165,7 +165,7 @@ Authorization: Bearer <발급받은 JWT>
 - 같은 사람이 다시 내면 덮어씀. Response 200(본문 없음).
 
 ### 5-2. ③ 추천 실행
-**POST** `/api/votes/{voteId}/recommend` *(status `RECOMMENDING` → `VOTING`)* — body 없음
+**POST** `/api/votes/{voteId}/recommend` *(status `RECOMMENDING` → `VOTING`, 마감 전이어야 함)* — body 없음
 ```json
 {
   "candidates": [
@@ -180,18 +180,22 @@ Authorization: Bearer <발급받은 JWT>
 - **오류**: 제출된 선호 없음 → `409`
 
 ### 5-3. ④ 호/불호 투표
-**POST** `/api/votes/{voteId}/ballots` *(status `VOTING`)*
+**POST** `/api/votes/{voteId}/ballots` *(status `VOTING`, 마감 전이어야 함)*
 ```json
 { "choices": { "30": "LIKE", "31": "DISLIKE", "12": "LIKE" } }
 ```
 - 다시 내면 그 사람 표 덮어씀. **오류**: 후보 아닌 메뉴 → `400`.
+- **⑤ 자동 집계**: 별도 마무리 버튼은 없다. **그룹원 전원이 호/불호를 제출하면** 이 요청 처리 중에 집계가 자동 실행되어 최종 메뉴가 확정되고 status가 `CLOSED`로 바뀐다.
+  - 선정 규칙: ① 호 최다 → ② 동점 시 불호 최소 → ③ 그래도 동점 시 `호-불호` 최대.
+  - 마지막 투표자의 응답 본문에는 결과가 담기지 않으므로, 결과는 **5-5 조회 API**의 `resultMenu`로 확인한다.
 
-### 5-4. ⑤ 집계 → 최종 메뉴
-**POST** `/api/votes/{voteId}/result` *(status `VOTING` → `CLOSED`)* — body 없음
+### 5-4. ⑤ 방장 강제 마감
+**POST** `/api/votes/{voteId}/close` *(status `VOTING` → `CLOSED`, **방장(OWNER)만**)* — body 없음
 ```json
 { "menuId": 30, "name": "곱창구이", "cuisine": "MEAT" }
 ```
-- 선정 규칙: ① 호 최다 → ② 동점 시 불호 최소 → ③ 그래도 동점 시 `호-불호` 최대.
+- 전원이 투표하지 않았어도 **그때까지 모인 표로 즉시 집계**해 마감한다. (마감시각 무관)
+- 집계 규칙은 자동 집계와 동일. **오류**: 방장 아님 → `403`, VOTING 단계 아님 → `409`.
 
 ### 5-5. 투표 상태/결과 조회
 **GET** `/api/votes/{voteId}`
@@ -229,8 +233,8 @@ Authorization: Bearer <발급받은 JWT>
 [방장]   POST /api/groups/1/votes {title}          → 투표 생성
 [전원]   POST /api/votes/1/preferences {...}       → 선호 제출
 [방장]   POST /api/votes/1/recommend               → 후보 3개
-[전원]   POST /api/votes/1/ballots {choices}       → 호/불호
-[방장]   POST /api/votes/1/result                  → 최종 메뉴
+[전원]   POST /api/votes/1/ballots {choices}       → 호/불호 (전원 제출 시 자동 집계·마감)
+[전원]   GET  /api/votes/1                          → resultMenu 로 최종 메뉴 확인
 ```
 
 ### curl 예시
