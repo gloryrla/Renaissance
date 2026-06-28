@@ -98,9 +98,12 @@ class VoteRealDatasetTest {
             voteSessionService.submitBallot(voteId, m.getId(), new BallotRequest(m.getId(), choices));
         }
 
-        CandidateMenuResponse winner = voteSessionService.decide(voteId, p1.getId());
-        assertEquals(favorite, winner.menuId());
-        System.out.println("최종 선정: " + winner.name() + " [" + winner.cuisine() + "]");
+        // 전원 투표 완료 -> 자동 집계되어 CLOSED
+        VoteDetailResponse detail = voteSessionService.getDetail(voteId, p1.getId());
+        assertEquals(VoteStatus.CLOSED, detail.status());
+        assertNotNull(detail.resultMenu());
+        assertEquals(favorite, detail.resultMenu().menuId());
+        System.out.println("최종 선정: " + detail.resultMenu().name() + " [" + detail.resultMenu().cuisine() + "]");
     }
 
     private Member saveMember(String name, Long kakaoId) {

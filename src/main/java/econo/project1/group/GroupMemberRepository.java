@@ -14,6 +14,8 @@ public interface GroupMemberRepository extends JpaRepository<GroupMember, Long> 
 
     boolean existsByGroupAndMember(Group group, Member member);
 
+    Optional<GroupMember> findByGroupAndMember(Group group, Member member);
+
     @Override
     Optional<GroupMember> findById(Long aLong);
 }

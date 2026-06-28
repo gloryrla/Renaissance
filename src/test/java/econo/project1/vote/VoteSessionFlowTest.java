@@ -102,17 +102,19 @@ class VoteSessionFlowTest {
         voteSessionService.submitBallot(voteId, a.getId(), new BallotRequest(a.getId(), ballot(ids, favorite)));
         voteSessionService.submitBallot(voteId, b.getId(), new BallotRequest(b.getId(), ballot(ids, favorite)));
 
-        // ===== ⑤ 집계 =====
-        CandidateMenuResponse winner = voteSessionService.decide(voteId, a.getId());
-        assertEquals(favorite, winner.menuId(), "호가 가장 많은 메뉴가 선정돼야 한다");
+        // 아직 동길이 투표 전이라 자동 집계되지 않고 VOTING 유지
+        assertEquals(VoteStatus.VOTING, voteSessionService.getDetail(voteId, a.getId()).status(),
+                "전원이 투표하기 전에는 집계되지 않아야 한다");
 
-        // 최종 상태 확인
+        // ===== ⑤ 마지막 그룹원까지 투표하면 자동 집계 =====
+        voteSessionService.submitBallot(voteId, d.getId(), new BallotRequest(d.getId(), ballot(ids, favorite)));
+
         VoteDetailResponse detail = voteSessionService.getDetail(voteId, a.getId());
-        assertEquals(VoteStatus.CLOSED, detail.status());
+        assertEquals(VoteStatus.CLOSED, detail.status(), "전원 투표 시 자동 집계되어 CLOSED 여야 한다");
         assertNotNull(detail.resultMenu());
-        assertEquals(favorite, detail.resultMenu().menuId());
+        assertEquals(favorite, detail.resultMenu().menuId(), "호가 가장 많은 메뉴가 선정돼야 한다");
 
-        System.out.println("최종 선정 메뉴 = " + winner.name() + " (id=" + winner.menuId() + ")");
+        System.out.println("최종 선정 메뉴 = " + detail.resultMenu().name() + " (id=" + detail.resultMenu().menuId() + ")");
     }
 
     @Test
@@ -139,6 +141,41 @@ class VoteSessionFlowTest {
         assertThrows(IllegalStateException.class, () ->
                 voteSessionService.submitBallot(vote.getId(), m.getId(),
                         new BallotRequest(m.getId(), Map.of(1L, VoteService.Choice.LIKE))));
+    }
+
+    @Test
+    void 방장은_전원_투표_전에도_강제_마감할_수_있다() {
+        Member owner = saveMember("방장", 4001L);
+        Member m2 = saveMember("멤버", 4002L);
+        Group group = groupRepository.save(Group.builder().name("강제마감팟").build());
+        groupMemberRepository.save(GroupMember.builder().group(group).member(owner).role(GroupRole.OWNER).build());
+        groupMemberRepository.save(GroupMember.builder().group(group).member(m2).role(GroupRole.MEMBER).build());
+
+        menuRepository.save(menu("김밥", Cuisine.KOREAN));
+        menuRepository.save(menu("초밥", Cuisine.JAPANESE));
+        menuRepository.save(menu("스테이크", Cuisine.WESTERN));
+
+        Vote vote = voteRepository.save(Vote.builder().title("점심").group(group).build());
+        Long voteId = vote.getId();
+
+        // 선호 제출 -> 추천
+        voteSessionService.submitPreference(voteId, owner.getId(),
+                new MemberPreferenceRequest(owner.getId(), Collections.emptySet(), Collections.emptySet()));
+        RecommendResultResponse rec = voteSessionService.recommend(voteId, owner.getId());
+        List<Long> ids = rec.candidates().stream().map(CandidateMenuResponse::menuId).toList();
+        Long favorite = ids.get(0);
+
+        // 방장만 투표하고 일반 멤버는 미투표 -> 자동 집계되지 않음
+        voteSessionService.submitBallot(voteId, owner.getId(), new BallotRequest(owner.getId(), ballot(ids, favorite)));
+        assertEquals(VoteStatus.VOTING, voteSessionService.getDetail(voteId, owner.getId()).status());
+
+        // 일반 멤버는 강제 마감 불가
+        assertThrows(ForbiddenException.class, () -> voteSessionService.forceClose(voteId, m2.getId()));
+
+        // 방장은 강제 마감 가능 -> 모인 표로 즉시 집계
+        CandidateMenuResponse winner = voteSessionService.forceClose(voteId, owner.getId());
+        assertEquals(favorite, winner.menuId());
+        assertEquals(VoteStatus.CLOSED, voteSessionService.getDetail(voteId, owner.getId()).status());
     }
 
     // ===== 헬퍼 =====
