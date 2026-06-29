@@ -1,6 +1,7 @@
 package econo.project1.kakao;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,6 +24,7 @@ public class RestaurantApiController {
             summary = "주변 식당 검색",
             description = "메뉴명으로 주변 식당을 검색하는 엔드포인트 (카카오 로컬 API)"
     )
+    @ApiResponse(responseCode = "200", description = "검색된 식당 목록(KakaoLocalResponseDto)")
     @GetMapping
     public KakaoLocalResponseDto search(@RequestParam String menu,
                                         @RequestParam(defaultValue = "1") Integer page) {

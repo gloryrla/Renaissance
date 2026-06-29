@@ -6,6 +6,7 @@ import econo.project1.kakao.KakaoUserInfoResponseDto;
 import econo.project1.member.Member;
 import econo.project1.member.MemberRepository;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -40,6 +41,7 @@ public class AuthController {
             summary = "카카오 인가 URL 조회",
             description = "프론트가 사용할 카카오 인가 URL 을 만들어 반환하는 엔드포인트"
     )
+    @ApiResponse(responseCode = "200", description = "카카오 인가 URL (Map: url)")
     @GetMapping("/kakao/login-url")
     public Map<String, String> kakaoLoginUrl() {
         String url = "https://kauth.kakao.com/oauth/authorize"
@@ -54,6 +56,7 @@ public class AuthController {
             summary = "카카오 로그인",
             description = "인가코드로 토큰을 교환하고 회원을 저장/조회한 뒤 JWT 를 발급하는 엔드포인트"
     )
+    @ApiResponse(responseCode = "200", description = "발급된 JWT 와 회원 정보(LoginResponse)")
     @PostMapping("/kakao")
     public LoginResponse kakaoLogin(@RequestBody KakaoLoginRequest request) {
         String kakaoAccessToken = kakaoService.getAccessTokenFromKakao(request.code());
@@ -73,6 +76,7 @@ public class AuthController {
             summary = "내 정보 조회",
             description = "현재 로그인한 회원 정보를 조회하는 엔드포인트"
     )
+    @ApiResponse(responseCode = "200", description = "현재 로그인 회원 정보(MemberResponse)")
     @GetMapping("/me")
     public MemberResponse me(@LoginMember Long memberId) {
         Member member = memberRepository.findById(memberId)
