@@ -1,6 +1,7 @@
 package econo.project1.vote;
 
 import econo.project1.common.Cuisine;
+import econo.project1.common.School;
 import econo.project1.group.Group;
 import econo.project1.menu.Menu;
 
@@ -29,6 +30,10 @@ public class Vote {
 
     @ManyToOne(fetch = FetchType.LAZY)
     private Group group;
+
+    // 식당 검색 기준이 되는 학교(장소). 투표 생성 시 고정된다.
+    @Enumerated(EnumType.STRING)
+    private School school;
 
     // 진행 단계: RECOMMENDING(선호 수집) -> VOTING(호불호 투표) -> CLOSED(종료)
     @Enumerated(EnumType.STRING)

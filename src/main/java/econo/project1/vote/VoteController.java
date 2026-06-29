@@ -27,6 +27,10 @@ public class VoteController {
     @PostMapping("/groups/{groupId}/votes")
     public Vote createVote(@PathVariable Long groupId,
                            @RequestBody VoteCreateRequest request) {
+        if (request.school() == null) {
+            throw new IllegalArgumentException("학교(school)는 필수입니다.");
+        }
+
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new NotFoundException("그룹이 존재하지 않습니다. id=" + groupId));
 
@@ -34,6 +38,7 @@ public class VoteController {
                 .title(request.title())
                 .deadline(request.deadline())
                 .group(group)
+                .school(request.school())
                 .build();
         return voteRepository.save(vote);
     }

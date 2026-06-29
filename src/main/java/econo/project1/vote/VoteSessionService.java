@@ -198,6 +198,7 @@ public class VoteSessionService {
                 vote.getId(),
                 vote.getTitle(),
                 vote.getStatus(),
+                vote.getSchool(),
                 candidates,
                 result == null ? null : CandidateMenuResponse.from(result),
                 vote.isRelaxed(),
