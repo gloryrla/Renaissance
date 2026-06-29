@@ -4,6 +4,7 @@ import econo.project1.common.NotFoundException;
 import econo.project1.group.Group;
 import econo.project1.group.GroupRepository;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -22,6 +23,7 @@ public class VoteController {
             summary = "투표 생성",
             description = "그룹에 새로운 투표를 생성하는 엔드포인트"
     )
+    @ApiResponse(responseCode = "200", description = "생성된 투표 정보(Vote)")
     @PostMapping("/groups/{groupId}/votes")
     public Vote createVote(@PathVariable Long groupId,
                            @RequestBody VoteCreateRequest request) {

@@ -2,6 +2,7 @@ package econo.project1.vote;
 
 import econo.project1.auth.LoginMember;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -40,6 +41,7 @@ public class VoteSessionController {
             summary = "추천 실행",
             description = "그룹메뉴 추천을 실행하는 엔드포인트"
     )
+    @ApiResponse(responseCode = "200", description = "확정된 후보 3개 추천 결과(RecommendResultResponse)")
     @PostMapping("/{voteId}/recommend")
     public RecommendResultResponse recommend(@LoginMember Long memberId, @PathVariable Long voteId) {
         return voteSessionService.recommend(voteId, memberId);
@@ -62,6 +64,7 @@ public class VoteSessionController {
             summary = "방장 강제 마감",
             description = "전원이 투표하지 않았어도 모인 표로 즉시 집계·마감하는 엔드포인트 (방장 OWNER 만 가능)"
     )
+    @ApiResponse(responseCode = "200", description = "집계되어 확정된 최종 메뉴(CandidateMenuResponse)")
     @PostMapping("/{voteId}/close")
     public CandidateMenuResponse close(@LoginMember Long memberId, @PathVariable Long voteId) {
         return voteSessionService.forceClose(voteId, memberId);
@@ -72,6 +75,7 @@ public class VoteSessionController {
             summary = "투표 진행 상태 조회",
             description = "현재 진행 상태/후보/결과를 조회하는 엔드포인트. 집계 완료 시 resultMenu 로 최종 메뉴를 확인한다."
     )
+    @ApiResponse(responseCode = "200", description = "투표 진행 상태/후보/결과 상세(VoteDetailResponse)")
     @GetMapping("/{voteId}")
     public VoteDetailResponse get(@LoginMember Long memberId, @PathVariable Long voteId) {
         return voteSessionService.getDetail(voteId, memberId);
@@ -82,6 +86,7 @@ public class VoteSessionController {
             summary = "선호 미제출 그룹원 조회",
             description = "아직 선호를 제출하지 않은 그룹원 목록을 조회하는 엔드포인트"
     )
+    @ApiResponse(responseCode = "200", description = "선호 미제출 그룹원 목록(List<MemberSummaryResponse>)")
     @GetMapping("/{voteId}/pending-members")
     public List<MemberSummaryResponse> pendingMembers(@LoginMember Long memberId, @PathVariable Long voteId) {
         return voteSessionService.pendingMembers(voteId, memberId);
