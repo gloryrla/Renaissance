@@ -94,6 +94,28 @@ public class GroupApiController {
                 .toList();
     }
 
+    // 그룹 삭제 (방장 전용)
+    @Operation(
+            summary = "그룹 삭제",
+            description = "그룹을 삭제하는 엔드포인트 (방장 OWNER 만 가능). 그룹의 모든 투표·연관 데이터·그룹원도 함께 삭제된다."
+    )
+    @DeleteMapping("/{groupId}")
+    public void deleteGroup(@LoginMember Long memberId, @PathVariable Long groupId) {
+        groupService.deleteGroup(groupId, memberId);
+    }
+
+    // 그룹원 추방 (방장 전용)
+    @Operation(
+            summary = "그룹원 추방",
+            description = "그룹원을 그룹에서 제거하는 엔드포인트 (방장 OWNER 만 가능). 추방된 사람이 그룹 투표에 낸 선호/호불호와 참여자 등록도 함께 정리된다."
+    )
+    @DeleteMapping("/{groupId}/members/{memberId}")
+    public void removeMember(@LoginMember Long actorId,
+                             @PathVariable Long groupId,
+                             @PathVariable Long memberId) {
+        groupService.removeMember(groupId, actorId, memberId);
+    }
+
     private Member getMember(Long memberId) {
         return memberRepository.findById(memberId)
                 .orElseThrow(() -> new NotFoundException("회원이 존재하지 않습니다. id=" + memberId));
