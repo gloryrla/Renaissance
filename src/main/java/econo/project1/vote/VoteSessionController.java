@@ -26,8 +26,8 @@ public class VoteSessionController {
 
     // ② 그룹원 선호 제출
     @Operation(
-            summary = "그룹원 선호 제출",
-            description = "각 그룹원 마다 선호(투표)를 제출하는 엔드포인트"
+            summary = "참여자 선호 제출",
+            description = "투표 참여자가 선호(비선호 카테고리/식이 제한)를 제출하는 엔드포인트. 참여자가 아니면 403."
     )
     @PostMapping("/{voteId}/preferences")
     public void submitPreference(@LoginMember Long memberId,
@@ -47,10 +47,10 @@ public class VoteSessionController {
         return voteSessionService.recommend(voteId, memberId);
     }
 
-    // ④ 후보에 호/불호 투표. 그룹원 전원이 제출하면 ⑤ 집계가 자동 실행되어 CLOSED 로 마감된다.
+    // ④ 후보에 호/불호 투표. 참여자 전원이 제출하면 ⑤ 집계가 자동 실행되어 CLOSED 로 마감된다.
     @Operation(
             summary = "호/불호 투표 제출",
-            description = "확정된 후보에 호/불호 투표를 제출하는 엔드포인트. 그룹원 전원이 제출하면 집계가 자동 실행되어 마감된다."
+            description = "확정된 후보에 호/불호 투표를 제출하는 엔드포인트. 참여자가 아니면 403. 참여자 전원이 제출하면 집계가 자동 실행되어 마감된다."
     )
     @PostMapping("/{voteId}/ballots")
     public void submitBallot(@LoginMember Long memberId,
@@ -62,12 +62,23 @@ public class VoteSessionController {
     // ⑤ 방장 강제 마감: 전원이 투표하지 않았어도 모인 표로 즉시 집계·마감 (OWNER 만 가능)
     @Operation(
             summary = "방장 강제 마감",
-            description = "전원이 투표하지 않았어도 모인 표로 즉시 집계·마감하는 엔드포인트 (방장 OWNER 만 가능)"
+            description = "전원이 투표하지 않았어도 그때까지 모인 표로 즉시 집계·마감하는 엔드포인트 (방장 OWNER 만 가능). "
+                    + "단, 아무도 투표하지 않았으면 409로 거부된다."
     )
     @ApiResponse(responseCode = "200", description = "집계되어 확정된 최종 메뉴(CandidateMenuResponse)")
     @PostMapping("/{voteId}/close")
     public CandidateMenuResponse close(@LoginMember Long memberId, @PathVariable Long voteId) {
         return voteSessionService.forceClose(voteId, memberId);
+    }
+
+    // 투표 삭제 (방장 OWNER 만). 연관 데이터(선호/후보/호불호)도 함께 삭제된다.
+    @Operation(
+            summary = "투표 삭제",
+            description = "투표를 삭제하는 엔드포인트 (방장 OWNER 만 가능). 선호/후보/호불호 등 연관 데이터도 함께 삭제된다."
+    )
+    @DeleteMapping("/{voteId}")
+    public void delete(@LoginMember Long memberId, @PathVariable Long voteId) {
+        voteSessionService.deleteVote(voteId, memberId);
     }
 
     // 현재 진행 상태/후보/결과 조회 (집계 완료 시 resultMenu 로 최종 메뉴 확인)
@@ -81,12 +92,12 @@ public class VoteSessionController {
         return voteSessionService.getDetail(voteId, memberId);
     }
 
-    // 아직 선호를 안 낸 그룹원 목록
+    // 아직 선호를 안 낸 참여자 목록
     @Operation(
-            summary = "선호 미제출 그룹원 조회",
-            description = "아직 선호를 제출하지 않은 그룹원 목록을 조회하는 엔드포인트"
+            summary = "선호 미제출 참여자 조회",
+            description = "아직 선호를 제출하지 않은 참여자 목록을 조회하는 엔드포인트"
     )
-    @ApiResponse(responseCode = "200", description = "선호 미제출 그룹원 목록(List<MemberSummaryResponse>)")
+    @ApiResponse(responseCode = "200", description = "선호 미제출 참여자 목록(List<MemberSummaryResponse>)")
     @GetMapping("/{voteId}/pending-members")
     public List<MemberSummaryResponse> pendingMembers(@LoginMember Long memberId, @PathVariable Long voteId) {
         return voteSessionService.pendingMembers(voteId, memberId);

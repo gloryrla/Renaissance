@@ -11,4 +11,6 @@ public interface VotePreferenceRepository extends JpaRepository<VotePreference, 
     List<VotePreference> findByVote(Vote vote);
 
     Optional<VotePreference> findByVoteAndMember(Vote vote, Member member);
+
+    void deleteByVote(Vote vote);
 }

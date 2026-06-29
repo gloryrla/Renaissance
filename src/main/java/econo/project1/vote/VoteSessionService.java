@@ -48,7 +48,7 @@ public class VoteSessionService {
     @Transactional
     public void submitPreference(Long voteId, Long actingMemberId, MemberPreferenceRequest request) {
         Vote vote = getVote(voteId);
-        Member member = requireGroupMember(vote, actingMemberId);
+        Member member = requireParticipant(vote, actingMemberId);
         requireStatus(vote, VoteStatus.RECOMMENDING);
         requireBeforeDeadline(vote);
 
@@ -111,7 +111,7 @@ public class VoteSessionService {
     @Transactional
     public void submitBallot(Long voteId, Long actingMemberId, BallotRequest request) {
         Vote vote = getVote(voteId);
-        Member member = requireGroupMember(vote, actingMemberId);
+        Member member = requireParticipant(vote, actingMemberId);
         requireStatus(vote, VoteStatus.VOTING);
         requireBeforeDeadline(vote);
 
@@ -148,6 +148,9 @@ public class VoteSessionService {
         Member member = requireGroupMember(vote, actingMemberId);
         requireOwner(vote, member);
         requireStatus(vote, VoteStatus.VOTING);
+        if (ballotRepository.findByVote(vote).isEmpty()) {
+            throw new IllegalStateException("아무도 투표하지 않았습니다.");
+        }
         return aggregate(vote);
     }
 
@@ -171,18 +174,29 @@ public class VoteSessionService {
         return CandidateMenuResponse.from(winner);
     }
 
-    // 그룹원 전원이 적어도 한 표라도 제출했는지 검사
+    // 참여자 전원이 적어도 한 표라도 제출했는지 검사
     private boolean allMembersVoted(Vote vote) {
-        Set<Long> groupMemberIds = groupMemberRepository.findByGroup(vote.getGroup()).stream()
-                .map(gm -> gm.getMember().getId())
-                .collect(Collectors.toSet());
-        if (groupMemberIds.isEmpty()) {
+        Set<Long> expected = participantIds(vote);
+        if (expected.isEmpty()) {
             return false;
         }
         Set<Long> votedMemberIds = ballotRepository.findByVote(vote).stream()
                 .map(b -> b.getMember().getId())
                 .collect(Collectors.toSet());
-        return votedMemberIds.containsAll(groupMemberIds);
+        return votedMemberIds.containsAll(expected);
+    }
+
+    // 투표 삭제 (방장 OWNER 만). 연관 데이터(선호/후보/호불호)도 함께 삭제한다.
+    @Transactional
+    public void deleteVote(Long voteId, Long actingMemberId) {
+        Vote vote = getVote(voteId);
+        Member member = requireGroupMember(vote, actingMemberId);
+        requireOwner(vote, member);
+
+        preferenceRepository.deleteByVote(vote);
+        candidateRepository.deleteByVote(vote);
+        ballotRepository.deleteByVote(vote);
+        voteRepository.delete(vote);
     }
 
     @Transactional(readOnly = true)
@@ -193,12 +207,16 @@ public class VoteSessionService {
         List<CandidateMenuResponse> candidates = candidateRepository.findByVote(vote).stream()
                 .map(c -> CandidateMenuResponse.from(c.getMenu()))
                 .collect(Collectors.toList());
+        List<MemberSummaryResponse> participants = memberRepository.findAllById(participantIds(vote)).stream()
+                .map(m -> new MemberSummaryResponse(m.getId(), m.getName()))
+                .collect(Collectors.toList());
         Menu result = vote.getResultMenu();
         return new VoteDetailResponse(
                 vote.getId(),
                 vote.getTitle(),
                 vote.getStatus(),
                 vote.getSchool(),
+                participants,
                 candidates,
                 result == null ? null : CandidateMenuResponse.from(result),
                 vote.isRelaxed(),
@@ -206,7 +224,7 @@ public class VoteSessionService {
                 vote.isImpossible());
     }
 
-    // 아직 선호를 제출하지 않은 그룹원 목록 (추천 전에 누구를 기다려야 하는지)
+    // 아직 선호를 제출하지 않은 참여자 목록 (추천 전에 누구를 기다려야 하는지)
     @Transactional(readOnly = true)
     public List<MemberSummaryResponse> pendingMembers(Long voteId, Long actingMemberId) {
         Vote vote = getVote(voteId);
@@ -216,8 +234,7 @@ public class VoteSessionService {
                 .map(p -> p.getMember().getId())
                 .collect(Collectors.toSet());
 
-        return groupMemberRepository.findByGroup(vote.getGroup()).stream()
-                .map(GroupMember::getMember)
+        return memberRepository.findAllById(participantIds(vote)).stream()
                 .filter(m -> !submitted.contains(m.getId()))
                 .map(m -> new MemberSummaryResponse(m.getId(), m.getName()))
                 .collect(Collectors.toList());
@@ -233,6 +250,26 @@ public class VoteSessionService {
     private Member getMember(Long memberId) {
         return memberRepository.findById(memberId)
                 .orElseThrow(() -> new NotFoundException("멤버가 존재하지 않습니다. id=" + memberId));
+    }
+
+    // 이 투표의 참여자 id 집합. 비어있으면(예전 데이터) 그룹 전원으로 폴백한다.
+    private Set<Long> participantIds(Vote vote) {
+        Set<Long> ids = vote.getParticipantMemberIds();
+        if (ids == null || ids.isEmpty()) {
+            return groupMemberRepository.findByGroup(vote.getGroup()).stream()
+                    .map(gm -> gm.getMember().getId())
+                    .collect(Collectors.toSet());
+        }
+        return ids;
+    }
+
+    // 제출 권한: 그룹원이면서 이 투표의 참여자여야 한다.
+    private Member requireParticipant(Vote vote, Long memberId) {
+        Member member = requireGroupMember(vote, memberId);
+        if (!participantIds(vote).contains(memberId)) {
+            throw new ForbiddenException("이 투표의 참여자만 제출할 수 있습니다.");
+        }
+        return member;
     }
 
     // 로그인 회원이 이 투표가 속한 그룹의 멤버인지 검증하고, 그 Member를 돌려준다.

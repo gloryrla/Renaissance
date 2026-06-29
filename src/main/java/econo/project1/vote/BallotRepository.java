@@ -10,4 +10,6 @@ public interface BallotRepository extends JpaRepository<Ballot, Long> {
     List<Ballot> findByVote(Vote vote);
 
     void deleteByVoteAndMember(Vote vote, Member member);
+
+    void deleteByVote(Vote vote);
 }

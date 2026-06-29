@@ -35,6 +35,13 @@ public class Vote {
     @Enumerated(EnumType.STRING)
     private School school;
 
+    // 이 투표에 참여하는 그룹원 id 스냅샷. 이 사람들만 선호/호불호를 제출하고, 전원 제출 시 자동 마감된다.
+    @ElementCollection(fetch = FetchType.LAZY)
+    @CollectionTable(name = "vote_participant", joinColumns = @JoinColumn(name = "vote_id"))
+    @Column(name = "member_id")
+    @Builder.Default
+    private Set<Long> participantMemberIds = new HashSet<>();
+
     // 진행 단계: RECOMMENDING(선호 수집) -> VOTING(호불호 투표) -> CLOSED(종료)
     @Enumerated(EnumType.STRING)
     @Builder.Default

@@ -14,6 +14,7 @@ public record VoteDetailResponse(
         String title,
         VoteStatus status,
         School school,                      // 식당 검색 기준 학교
+        List<MemberSummaryResponse> participants,  // 이 투표 참여자
         List<CandidateMenuResponse> candidates,
         CandidateMenuResponse resultMenu,   // 확정 전엔 null
         boolean relaxed,
